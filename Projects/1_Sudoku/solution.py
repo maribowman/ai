@@ -150,7 +150,7 @@ def search(values):
         The values dictionary with all boxes assigned or False
     """
     # First, reduce the puzzle using the previous function
-    # values = naked_twins(values)
+    values = naked_twins(values)
     values = reduce_puzzle(values)
     if values is False:
         return False
@@ -189,8 +189,8 @@ def solve(grid):
 
 
 if __name__ == "__main__":
-    # diag_sudoku_grid = '2.............62....1....7...6..8...3...9...7...6..4...4....8....52.............3'
-    diag_sudoku_grid = '4.....8.5.3..........7......2.....6.....8.4......1.......6.3.7.5..2.....1.4......'
+    diag_sudoku_grid = '2.............62....1....7...6..8...3...9...7...6..4...4....8....52.............3'
+    # diag_sudoku_grid = '4.....8.5.3..........7......2.....6.....8.4......1.......6.3.7.5..2.....1.4......'
     display(grid2values(diag_sudoku_grid))
     result = solve(diag_sudoku_grid)
     display(result)
