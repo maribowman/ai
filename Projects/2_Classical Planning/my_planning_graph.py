@@ -1,4 +1,4 @@
-from itertools import chain
+from itertools import chain, combinations
 
 from layers import BaseActionLayer, BaseLiteralLayer, makeNoOp, make_node
 
@@ -19,11 +19,12 @@ class ActionLayer(BaseActionLayer):
         # TODO: implement this function
 
         for effectA in actionA.effects:
-            for effectB in actionB.effects:
-                if ~effectA in actionB.effects or ~effectB in actionA.effects:
-                    return True
-
-        # raise NotImplementedError
+            if ~effectA in actionB.effects:
+                return True
+        for effectB in actionB.effects:
+            if ~effectB in actionA.effects:
+                return True
+        return False
 
     def _interference(self, actionA, actionB):
         """ Return True if the effects of either action negate the preconditions of the other 
@@ -39,11 +40,12 @@ class ActionLayer(BaseActionLayer):
         # TODO: implement this function
 
         for effectA in actionA.effects:
-            for effectB in actionB.effects:
-                if ~effectA in actionB.preconditions or ~effectB in actionA.preconditions:
-                    return True
-
-        # raise NotImplementedError
+            if ~effectA in actionB.preconditions:
+                return True
+        for effectB in actionB.effects:
+            if ~effectB in actionA.preconditions:
+                return True
+        return False
 
     def _competing_needs(self, actionA, actionB):
         """ Return True if any preconditions of the two actions are pairwise mutex in the parent layer
@@ -63,8 +65,7 @@ class ActionLayer(BaseActionLayer):
             for preconB in actionB.preconditions:
                 if self.parent_layer.is_mutex(preconA, preconB):
                     return True
-
-        # raise NotImplementedError
+        return False
 
 
 class LiteralLayer(BaseLiteralLayer):
@@ -94,10 +95,9 @@ class LiteralLayer(BaseLiteralLayer):
         """ Return True if two literals are negations of each other """
         # TODO: implement this function
 
-        if literalA == ~literalB | literalB == ~literalA:
+        if literalA == ~literalB or literalB == ~literalA:
             return True
-
-        # raise NotImplementedError
+        return False
 
 
 class PlanningGraph:
@@ -135,6 +135,19 @@ class PlanningGraph:
         self.literal_layers = [layer]
         self.action_layers = []
 
+    def LevelCost(self, goal):
+        """LevelCost
+
+        The level cost is a helper function used by MaxLevel and LevelSum. The
+        level cost of a goal is equal to the level number of the first literal
+        layer in the planning graph where the goal literal appears.
+        """
+        loc = 0
+        for layer in self.literal_layers:
+            if goal in layer:
+                return loc
+            loc = loc + 1
+
     def h_levelsum(self):
         """ Calculate the level sum heuristic for the planning graph
 
@@ -163,18 +176,10 @@ class PlanningGraph:
         # TODO: implement this function
 
         self.fill()
-        sum_level = 0
-
+        costs = {}
         for goal in self.goal:
-            for level, layer in enumerate(self.literal_layers):
-                if goal in layer:
-                    sum_level += level
-                    break
-                # sum_level += level
-                # break
-        return sum_level
-
-        # raise NotImplementedError
+            costs[goal] = self.LevelCost(goal)
+        return sum(costs.values())
 
     def h_maxlevel(self):
         """ Calculate the max level heuristic for the planning graph
@@ -206,16 +211,10 @@ class PlanningGraph:
         # TODO: implement maxlevel heuristic
 
         self.fill()
-        h_max = 0
-
+        costs = {}
         for goal in self.goal:
-            for level, layer in enumerate(self.literal_layers):
-                if goal in layer:
-                    h_max = max(h_max, level)
-                    break
-        return h_max
-
-        # raise NotImplementedError
+            costs[goal] = self.LevelCost(goal)
+        return max(costs.values())
 
     def h_setlevel(self):
         """ Calculate the set level heuristic for the planning graph
@@ -241,20 +240,23 @@ class PlanningGraph:
         """
         # TODO: implement setlevel heuristic
 
-        while self._is_leveled == False:
-            if self.goal <= self.literal_layers[-1]:
-                no_pair_mutex = True
-                for goalA in self.goal:
-                    for goalB in self.goal:
-                        if self.literal_layers[-1].is_mutex(goalA, goalB) and goalA != goalB:
-                            no_pair_mutex = False
-                            break
-                if no_pair_mutex:
-                    return len(self.literal_layers) - 1
-            self._extend()
-        return len(self.literal_layers) - 1
-
-        # raise NotImplementedError
+        self.fill()
+        for loc, layer in enumerate(self.literal_layers):
+            all_goals_met = True
+            for goal in self.goal:
+                if goal not in layer:
+                    all_goals_met = False
+                    break
+            if not all_goals_met:
+                continue
+            goals_are_mutex = False
+            for goalA, goalB in combinations(self.goal, 2):
+                if layer.is_mutex(goalA, goalB):
+                    goals_are_mutex = True
+                    break
+            if not goals_are_mutex:
+                return loc
+        return -1
 
     ##############################################################################
     #                     DO NOT MODIFY CODE BELOW THIS LINE                     #
