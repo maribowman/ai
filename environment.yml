@@ -19,6 +19,6 @@ dependencies:
   - scipy=1.0.0
   - tqdm=4.19.4
   - pip
-  - pip:
-      - udacity-pa>=0.2
-      - z3-solver
+#  - pip:
+#      - udacity-pa>=0.2
+#      - z3-solver

@@ -1,7 +1,4 @@
-
-from itertools import chain, combinations
-from aimacode.planning import Action
-from aimacode.utils import expr
+from itertools import chain
 
 from layers import BaseActionLayer, BaseLiteralLayer, makeNoOp, make_node
 
@@ -20,8 +17,13 @@ class ActionLayer(BaseActionLayer):
         layers.ActionNode
         """
         # TODO: implement this function
-        raise NotImplementedError
 
+        for effectA in actionA.effects:
+            for effectB in actionB.effects:
+                if ~effectA in actionB.effects or ~effectB in actionA.effects:
+                    return True
+
+        # raise NotImplementedError
 
     def _interference(self, actionA, actionB):
         """ Return True if the effects of either action negate the preconditions of the other 
@@ -35,7 +37,13 @@ class ActionLayer(BaseActionLayer):
         layers.ActionNode
         """
         # TODO: implement this function
-        raise NotImplementedError
+
+        for effectA in actionA.effects:
+            for effectB in actionB.effects:
+                if ~effectA in actionB.preconditions or ~effectB in actionA.preconditions:
+                    return True
+
+        # raise NotImplementedError
 
     def _competing_needs(self, actionA, actionB):
         """ Return True if any preconditions of the two actions are pairwise mutex in the parent layer
@@ -50,7 +58,13 @@ class ActionLayer(BaseActionLayer):
         layers.BaseLayer.parent_layer
         """
         # TODO: implement this function
-        raise NotImplementedError
+
+        for preconA in actionA.preconditions:
+            for preconB in actionB.preconditions:
+                if self.parent_layer.is_mutex(preconA, preconB):
+                    return True
+
+        # raise NotImplementedError
 
 
 class LiteralLayer(BaseLiteralLayer):
@@ -67,12 +81,23 @@ class LiteralLayer(BaseLiteralLayer):
         layers.BaseLayer.parent_layer
         """
         # TODO: implement this function
-        raise NotImplementedError
+
+        for actionA in self.parents[literalA]:
+            for actionB in self.parents[literalB]:
+                if (self.parent_layer.is_mutex(actionA, actionB) is False):
+                    return False
+        return True
+
+        # raise NotImplementedError
 
     def _negation(self, literalA, literalB):
         """ Return True if two literals are negations of each other """
         # TODO: implement this function
-        raise NotImplementedError
+
+        if literalA == ~literalB | literalB == ~literalA:
+            return True
+
+        # raise NotImplementedError
 
 
 class PlanningGraph:
@@ -101,7 +126,7 @@ class PlanningGraph:
         # make no-op actions that persist every literal to the next layer
         no_ops = [make_node(n, no_op=True) for n in chain(*(makeNoOp(s) for s in problem.state_map))]
         self._actionNodes = no_ops + [make_node(a) for a in problem.actions_list]
-        
+
         # initialize the planning graph by finding the literals that are in the
         # first layer and finding the actions they they should be connected to
         literals = [s if f else ~s for f, s in zip(state, problem.state_map)]
@@ -136,7 +161,20 @@ class PlanningGraph:
         Russell-Norvig 10.3.1 (3rd Edition)
         """
         # TODO: implement this function
-        raise NotImplementedError
+
+        self.fill()
+        sum_level = 0
+
+        for goal in self.goal:
+            for level, layer in enumerate(self.literal_layers):
+                if goal in layer:
+                    sum_level += level
+                    break
+                # sum_level += level
+                # break
+        return sum_level
+
+        # raise NotImplementedError
 
     def h_maxlevel(self):
         """ Calculate the max level heuristic for the planning graph
@@ -166,7 +204,18 @@ class PlanningGraph:
         WARNING: you should expect long runtimes using this heuristic with A*
         """
         # TODO: implement maxlevel heuristic
-        raise NotImplementedError
+
+        self.fill()
+        h_max = 0
+
+        for goal in self.goal:
+            for level, layer in enumerate(self.literal_layers):
+                if goal in layer:
+                    h_max = max(h_max, level)
+                    break
+        return h_max
+
+        # raise NotImplementedError
 
     def h_setlevel(self):
         """ Calculate the set level heuristic for the planning graph
@@ -191,7 +240,21 @@ class PlanningGraph:
         WARNING: you should expect long runtimes using this heuristic on complex problems
         """
         # TODO: implement setlevel heuristic
-        raise NotImplementedError
+
+        while self._is_leveled == False:
+            if self.goal <= self.literal_layers[-1]:
+                no_pair_mutex = True
+                for goalA in self.goal:
+                    for goalB in self.goal:
+                        if self.literal_layers[-1].is_mutex(goalA, goalB) and goalA != goalB:
+                            no_pair_mutex = False
+                            break
+                if no_pair_mutex:
+                    return len(self.literal_layers) - 1
+            self._extend()
+        return len(self.literal_layers) - 1
+
+        # raise NotImplementedError
 
     ##############################################################################
     #                     DO NOT MODIFY CODE BELOW THIS LINE                     #
