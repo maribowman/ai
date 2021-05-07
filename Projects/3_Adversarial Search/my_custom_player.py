@@ -46,10 +46,10 @@ class CustomPlayer(DataPlayer):
         import random
 
         if state.ply_count < 4:
-            if self.data is not None and state in self.data:
-                print(f"using book data for run #{state.ply_count}")
-                self.queue.put(self.data[state])
-            else:
+            # if self.data is not None and state in self.data:
+            #     print(f"using book data for run #{state.ply_count}")
+            #     self.queue.put(self.data[state])
+            # else:
                 self.queue.put(random.choice(state.actions()))
         else:
             self.queue.put(self.alpha_beta_search(state=state, depth=5))

@@ -4,6 +4,7 @@ import random
 import time
 
 from isolation import Isolation
+from my_custom_player import alpha_beta_search
 
 
 def build_table(num_rounds=10):
@@ -24,7 +25,7 @@ def build_table(num_rounds=10):
 def build_tree(state, book, depth=10):
     if depth <= 0 or state.terminal_test():
         return -simulate(state)
-    action = random.choice(state.actions())
+    action = alpha_beta_search(state=state, depth=5)
     reward = build_tree(state.result(action), book, depth - 1)
     book[state][action] += reward
     return -reward
@@ -37,7 +38,7 @@ def simulate(state):
 
 
 if __name__ == "__main__":
-    rounds = 10000
+    rounds = 100
     start = time.time()
     open_book = build_table(rounds)
     end = time.time()
