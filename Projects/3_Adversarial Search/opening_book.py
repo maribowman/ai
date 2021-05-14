@@ -1,48 +1,56 @@
 import pickle
 import random
+from collections import defaultdict, Counter
 
-import time
+from math import trunc
 
-from isolation import Isolation
-from my_custom_player import alpha_beta_search
+from isolation import Isolation, DebugState
+
+ROUNDS = 10
+DEPTH = 4
 
 
-def build_table(num_rounds=10):
-    # Builds a table that maps from game state -> action
-    # by choosing the action that accumulates the most
-    # wins for the active player. (Note that this uses
-    # raw win counts, which are a poor statistic to
-    # estimate the value of an action; better statistics
-    # exist.)
-    from collections import defaultdict, Counter
+def build_table():
     book = defaultdict(Counter)
-    for _ in range(num_rounds):
-        state = Isolation()
-        build_tree(state, book)
+    state = Isolation()
+    build_tree(state, book, DEPTH)
     return {k: max(v, key=v.get) for k, v in book.items()}
 
 
-def build_tree(state, book, depth=10):
+def build_tree(state, book, depth):
     if depth <= 0 or state.terminal_test():
         return -simulate(state)
-    action = alpha_beta_search(state=state, depth=5)
-    reward = build_tree(state.result(action), book, depth - 1)
-    book[state][action] += reward
-    return -reward
+
+    total_score = 0
+    for index, action in enumerate(state.actions()):
+        score = build_tree(state.result(action), book, depth - 1)
+        book[state][action] += score
+        total_score += score
+        if depth == DEPTH:
+            print(f"{trunc((index + 1) / len(state.actions()) * 100)}%")
+    return -total_score
 
 
 def simulate(state):
-    while not state.terminal_test():
-        state = state.result(random.choice(state.actions()))
-    return -1 if state.utility(state.player()) < 0 else 1
+    score = 0
+    for _ in range(ROUNDS):
+        current_state = state
+        player_id = current_state.player()
+        while not current_state.terminal_test():
+            current_state = current_state.result(random.choice(current_state.actions()))
+        score += -1 if current_state.utility(player_id) < 0 else 1
+    return score
 
 
 if __name__ == "__main__":
-    rounds = 100
-    start = time.time()
-    open_book = build_table(rounds)
-    end = time.time()
-    print(
-        f"The total time for {rounds} rounds is {end - start} seconds, the average time for each round is {((end - start) / rounds)} seconds per round")
-    with open("data.pickle", 'wb') as f:
-        pickle.dump(open_book, f)
+    book = build_table()
+
+    with open("data2.pickle", 'wb') as f:
+        pickle.dump(book, f)
+
+    bench_game = Isolation()
+    best_opening = book[bench_game]
+    print("Best opening move: {}".format(DebugState.ind2xy(best_opening)))
+    result = bench_game.result(best_opening)
+    best_response = book[result]
+    print(f"best response: {DebugState.ind2xy(best_response)}")
