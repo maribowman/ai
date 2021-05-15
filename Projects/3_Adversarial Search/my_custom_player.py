@@ -2,6 +2,7 @@ import random
 
 from sample_players import DataPlayer
 
+MAX_DEPTH = 4
 
 class CustomPlayer(DataPlayer):
     """ Implement your own agent to play knight's Isolation
@@ -32,7 +33,7 @@ class CustomPlayer(DataPlayer):
         See RandomPlayer and GreedyPlayer in sample_players for more examples.
 
         **********************************************************************
-        NOTE: 
+        NOTE:
         - The caller is responsible for cutting off search, so calling
           get_action() from your own code will create an infinite loop!
           Refer to (and use!) the Isolation.play() function to run games.
@@ -50,8 +51,13 @@ class CustomPlayer(DataPlayer):
                 self.queue.put(self.data[state])
             else:
                 self.queue.put(random.choice(state.actions()))
-        else:
-            self.queue.put(alpha_beta_search(self.player_id, state))
+        depth = 1
+        while depth <= MAX_DEPTH:
+            move = alpha_beta_search(self.player_id, state, depth=depth)
+            if move is None:
+                return
+            self.queue.put(move)
+            depth += 1
 
 
 def alpha_beta_search(player_id, state, depth=5):
@@ -96,7 +102,7 @@ def alpha_beta_search(player_id, state, depth=5):
     alpha = float("-inf")
     beta = float("inf")
     best_score = float("-inf")
-    best_move = None
+    best_move = None if len(state.actions()) == 0 else state.actions()[0]
     for action in state.actions():
         value = min_value(state.result(action), alpha, beta, depth - 1)
         alpha = max(alpha, value)
